@@ -1,14 +1,19 @@
 import csv
 from typing import List, Dict, Tuple, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-ENERGY_WINDOW = 0.3
+ENERGY_WINDOW      = 0.3
+VALENCE_WINDOW     = 0.3
+DANCEABILITY_WINDOW = 0.3
 
-# Importance weights: Energy > Mood > Genre > Acoustic
-WEIGHT_ENERGY   = 0.50
-WEIGHT_MOOD     = 0.25
-WEIGHT_GENRE    = 0.15
-WEIGHT_ACOUSTIC = 0.10
+# Importance weights: Energy > Mood > Genre > Artist > Valence > Acoustic > Danceability
+WEIGHT_ENERGY      = 0.35
+WEIGHT_MOOD        = 0.20
+WEIGHT_GENRE       = 0.15
+WEIGHT_ARTIST      = 0.10
+WEIGHT_VALENCE     = 0.10
+WEIGHT_ACOUSTIC    = 0.05
+WEIGHT_DANCEABILITY = 0.05
 
 @dataclass
 class Song:
@@ -37,6 +42,9 @@ class UserProfile:
     favorite_mood: str
     target_energy: float
     likes_acoustic: bool
+    target_valence: float = 0.5
+    target_danceability: float = 0.5
+    preferred_artists: List[str] = field(default_factory=list)
 
 class Recommender:
     """
@@ -50,17 +58,31 @@ class Recommender:
         scored = []
         for song in self.songs:
             energy_diff = abs(song.energy - user.target_energy)
-            # Energy score: 0 outside the ±ENERGY_WINDOW, graded inside it
-            energy_score   = max(0.0, 1.0 - (energy_diff / ENERGY_WINDOW))
+            energy_score = max(0.0, 1.0 - (energy_diff / ENERGY_WINDOW))
+
+            valence_diff = abs(song.valence - user.target_valence)
+            valence_score = max(0.0, 1.0 - (valence_diff / VALENCE_WINDOW))
+
+            dance_diff = abs(song.danceability - user.target_danceability)
+            danceability_score = max(0.0, 1.0 - (dance_diff / DANCEABILITY_WINDOW))
+
             mood_score     = 1.0 if song.mood  == user.favorite_mood  else 0.0
             genre_score    = 1.0 if song.genre == user.favorite_genre else 0.0
             acoustic_score = song.acousticness if user.likes_acoustic else (1.0 - song.acousticness)
 
+            if user.preferred_artists:
+                artist_score = 1.0 if song.artist in user.preferred_artists else 0.0
+            else:
+                artist_score = 0.5  # neutral when no preference set
+
             total = (
-                energy_score   * WEIGHT_ENERGY +
-                mood_score     * WEIGHT_MOOD +
-                genre_score    * WEIGHT_GENRE +
-                acoustic_score * WEIGHT_ACOUSTIC
+                energy_score      * WEIGHT_ENERGY +
+                mood_score        * WEIGHT_MOOD +
+                genre_score       * WEIGHT_GENRE +
+                artist_score      * WEIGHT_ARTIST +
+                valence_score     * WEIGHT_VALENCE +
+                acoustic_score    * WEIGHT_ACOUSTIC +
+                danceability_score * WEIGHT_DANCEABILITY
             )
             scored.append((total, song))
 
@@ -80,6 +102,21 @@ class Recommender:
             reasons.append(f"mood matches your favorite ({song.mood})")
         if song.genre == user.favorite_genre:
             reasons.append(f"genre matches your favorite ({song.genre})")
+        if user.preferred_artists and song.artist in user.preferred_artists:
+            reasons.append(f"by a preferred artist ({song.artist})")
+
+        valence_diff = abs(song.valence - user.target_valence)
+        reasons.append(
+            f"valence {song.valence:.2f} is {'close to' if valence_diff < 0.1 else 'within range of'} "
+            f"your target {user.target_valence:.2f}"
+        )
+
+        dance_diff = abs(song.danceability - user.target_danceability)
+        reasons.append(
+            f"danceability {song.danceability:.2f} is {'close to' if dance_diff < 0.1 else 'within range of'} "
+            f"your target {user.target_danceability:.2f}"
+        )
+
         if user.likes_acoustic and song.acousticness > 0.5:
             reasons.append(f"has an acoustic feel ({song.acousticness:.2f})")
 
@@ -120,8 +157,19 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     Returns (score, reasons). Score is 0.0 if song is outside the energy window.
     """
     energy_diff = abs(song["energy"] - user_prefs["energy"])
-    # Energy score: 0 outside the ±ENERGY_WINDOW, graded inside it
     energy_score = max(0.0, 1.0 - (energy_diff / ENERGY_WINDOW))
+
+    valence_diff = abs(song["valence"] - user_prefs.get("target_valence", 0.5))
+    valence_score = max(0.0, 1.0 - (valence_diff / VALENCE_WINDOW))
+
+    dance_diff = abs(song["danceability"] - user_prefs.get("target_danceability", 0.5))
+    danceability_score = max(0.0, 1.0 - (dance_diff / DANCEABILITY_WINDOW))
+
+    preferred_artists = user_prefs.get("preferred_artists", [])
+    if preferred_artists:
+        artist_score = 1.0 if song["artist"] in preferred_artists else 0.0
+    else:
+        artist_score = 0.5  # neutral when no preference set
 
     reasons = []
 
@@ -138,16 +186,28 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
     if genre_score:
         reasons.append(f"genre matches ({song['genre']})")
 
+    if preferred_artists and song["artist"] in preferred_artists:
+        reasons.append(f"preferred artist ({song['artist']})")
+
+    if valence_diff <= VALENCE_WINDOW:
+        reasons.append(f"valence {song['valence']:.2f} within range of target {user_prefs.get('target_valence', 0.5):.2f}")
+
+    if dance_diff <= DANCEABILITY_WINDOW:
+        reasons.append(f"danceability {song['danceability']:.2f} within range of target {user_prefs.get('target_danceability', 0.5):.2f}")
+
     likes_acoustic = user_prefs.get("likes_acoustic", False)
     acoustic_score = song["acousticness"] if likes_acoustic else (1.0 - song["acousticness"])
     if likes_acoustic and song["acousticness"] > 0.5:
         reasons.append(f"acoustic feel ({song['acousticness']:.2f})")
 
     score = (
-        energy_score   * WEIGHT_ENERGY +
-        mood_score     * WEIGHT_MOOD +
-        genre_score    * WEIGHT_GENRE +
-        acoustic_score * WEIGHT_ACOUSTIC
+        energy_score       * WEIGHT_ENERGY +
+        mood_score         * WEIGHT_MOOD +
+        genre_score        * WEIGHT_GENRE +
+        artist_score       * WEIGHT_ARTIST +
+        valence_score      * WEIGHT_VALENCE +
+        acoustic_score     * WEIGHT_ACOUSTIC +
+        danceability_score * WEIGHT_DANCEABILITY
     )
     return (score, reasons)
 

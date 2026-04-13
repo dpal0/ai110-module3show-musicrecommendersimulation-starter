@@ -17,17 +17,14 @@ Real-world recommenders like Spotify or YouTube Music operate on the same core i
 
 ## How The System Works
 
-Explain your design in plain language.
+Each `Song` stores seven features: `genre`, `mood`, `energy`, `tempo_bpm`, `valence`, `danceability`, and `acousticness`. The `UserProfile` captures a user's `favorite_genre`, `favorite_mood`, `target_energy`, `likes_acoustic`, `target_valence`, `target_danceability`, and `preferred_artists`. The recommender scores every song by comparing it against the profile using fixed weights — energy (35%), mood (20%), genre (15%), preferred artist (10%), valence (10%), acousticness (5%), and danceability (5%) — then returns the top-k highest scoring songs.
 
-Some prompts to answer:
+**Potential biases:**
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
-
-You can include a simple diagram or bullet list if helpful.
+- **Artist popularity bias** — preferred artist matching rewards exact name matches, so users who like mainstream artists (who appear more in any catalog) benefit more than fans of niche artists.
+- **Cold-start bias** — new users with no preferences set default to 0.5 on every axis, silently steering them toward mid-range songs on all features rather than offering genuinely neutral results.
+- **Energy cliff bias** — songs just outside the ±0.30 energy window score zero on the highest-weighted factor (35%), creating a sharp drop-off rather than a gradual penalty.
+- **No diversity enforcement** — top-k is purely score-ranked, so results can be dominated by a single artist or genre if they score well.
 
 ---
 
