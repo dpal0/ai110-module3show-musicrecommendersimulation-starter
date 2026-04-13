@@ -97,10 +97,7 @@ Read and complete `model_card.md`:
 
 [**Model Card**](model_card.md)
 
-Write 1 to 2 paragraphs here about what you learned:
-
-- about how recommenders turn data into predictions
-- about where bias or unfairness could show up in systems like this
+Going into this I assumed recommenders were doing something fundamentally smart. Coming out, I realize they're mostly just weighted math that happens to feel smart when the catalog is big enough to hide the seams. The adversarial tests were more eye-opening than the normal ones — giving the system conflicting preferences (high energy + sad + acoustic) and watching it confidently return a quiet classical piece was genuinely unsettling. It didn't fail loudly. It just quietly gave a bad answer. That's the part that stuck with me: a real system does that to millions of people, and most of them never notice.
 
 
 ---
