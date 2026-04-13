@@ -33,6 +33,10 @@ Each `Song` stores seven features: `genre`, `mood`, `energy`, `tempo_bpm`, `vale
 ## CLI verification for ```load_sonngs```
 ![CLI Verification for load_songs](cli_verification.png)
 
+## Stress testing results:
+![alt text](image1to2.png)
+![alt text](image3to4.png)
+![alt text](image5to6.png)
 ## Getting Started
 
 ### Setup
@@ -70,25 +74,20 @@ You can add more tests in `tests/test_recommender.py`.
 
 ## Experiments You Tried
 
-Use this section to document the experiments you ran. For example:
-
-- What happened when you changed the weight on genre from 2.0 to 0.5
-- What happened when you added tempo or valence to the score
-- How did your system behave for different types of users
+- **Standard profiles** — tested High-Energy Pop, Chill Lofi, and Deep Intense Rock. Results matched intuition; the lofi profile scored 0.92 on a perfect match and rock correctly isolated Storm Runner at 0.86.
+- **Conflicting preferences** — gave the scorer high energy (0.90) alongside sad mood and acoustic preference. The quiet classical song Adagio in Blue won (0.55) because mood + genre bonuses outweighed the energy mismatch, revealing that categorical signals can override the top-weighted numeric score.
+- **Unknown genre/mood** — used genre "bossa-nova" and mood "dreamy", neither in the catalog. The scorer fell back to energy/valence/danceability proximity, returning a tightly bunched top-5 (scores 0.40–0.48) with no clear winner — graceful degradation confirmed.
+- **Extreme low energy (0.0)** — only one song (Spacewalk Thoughts, energy 0.28) fell within the ±0.30 window, dominating at 0.60 while the rest dropped sharply. Confirmed energy acts as a soft gate at the boundaries.
 
 ---
 
 ## Limitations and Risks
 
-Summarize some limitations of your recommender.
-
-Examples:
-
-- It only works on a tiny catalog
-- It does not understand lyrics or language
-- It might over favor one genre or mood
-
-You will go deeper on this in your model card.
+- **Tiny catalog** — 18 songs cannot represent real musical diversity; many genres and moods are missing entirely.
+- **Mood scarcity bias** — moods that appear only once (angry, nostalgic, euphoric) always surface that single song near the top regardless of how poorly it fits elsewhere.
+- **All-or-nothing genre/mood** — no partial credit for similar moods (e.g., "intense" vs. "angry"), which makes the scoring brittle.
+- **Conflicting preferences go undetected** — the system silently produces nonsensical results when user inputs contradict each other.
+- **No personalization over time** — every session starts from scratch; there is no listening history or feedback loop.
 
 ---
 
@@ -111,103 +110,61 @@ Write 1 to 2 paragraphs here about what you learned:
 Combines reflection and model card framing from the Module 3 guidance. :contentReference[oaicite:2]{index=2}  
 
 ```markdown
-# 🎧 Model Card - Music Recommender Simulation
+# Model Card - Music Recommender Simulation
 
 ## 1. Model Name
 
-Give your recommender a name, for example:
-
-> VibeFinder 1.0
+**StillBetterThanSpotify**
 
 ---
 
 ## 2. Intended Use
 
-- What is this system trying to do
-- Who is it for
-
-Example:
-
-> This model suggests 3 to 5 songs from a small catalog based on a user's preferred genre, mood, and energy level. It is for classroom exploration only, not for real users.
+Suggests the top 5 songs from an 18-song catalog based on a user's preferred genre, mood, and energy level. Built for classroom exploration only — not for real users or production use.
 
 ---
 
-## 3. How It Works (Short Explanation)
+## 3. How It Works
 
-Describe your scoring logic in plain language.
-
-- What features of each song does it consider
-- What information about the user does it use
-- How does it turn those into a number
-
-Try to avoid code in this section, treat it like an explanation to a non programmer.
+Every song is scored against the user's preferences using fixed weights: energy (35%), mood (20%), genre (15%), preferred artist (10%), valence (10%), acousticness (5%), danceability (5%). Energy uses a proximity window (±0.30); mood and genre are all-or-nothing matches. The top 5 highest-scoring songs are returned.
 
 ---
 
 ## 4. Data
 
-Describe your dataset.
-
-- How many songs are in `data/songs.csv`
-- Did you add or remove any songs
-- What kinds of genres or moods are represented
-- Whose taste does this data mostly reflect
+18 songs across 15 genres (pop, lofi, rock, metal, jazz, classical, etc.) and 13 moods. No songs were added or removed. Most moods appear only once, which creates scoring imbalances for users with rare preferences.
 
 ---
 
 ## 5. Strengths
 
-Where does your recommender work well
-
-You can think about:
-- Situations where the top results "felt right"
-- Particular user profiles it served well
-- Simplicity or transparency benefits
+Works well when the user's preferences align with catalog coverage. Clear winner profiles (e.g., the only rock/intense/high-energy song) score far ahead of alternatives, making results easy to interpret and explain.
 
 ---
 
 ## 6. Limitations and Bias
 
-Where does your recommender struggle
-
-Some prompts:
-- Does it ignore some genres or moods
-- Does it treat all users as if they have the same taste shape
-- Is it biased toward high energy or one genre by default
-- How could this be unfair if used in a real product
+- Moods appearing once (angry, nostalgic, euphoric) always surface that song near the top regardless of other fit.
+- No partial credit for similar moods — "intense" and "angry" are treated as completely different.
+- Conflicting preferences (high energy + acoustic + sad) produce counterintuitive results silently.
+- Only 18 songs; many genres and moods are missing entirely.
 
 ---
 
 ## 7. Evaluation
 
-How did you check your system
-
-Examples:
-- You tried multiple user profiles and wrote down whether the results matched your expectations
-- You compared your simulation to what a real app like Spotify or YouTube tends to recommend
-- You wrote tests for your scoring logic
-
-You do not need a numeric metric, but if you used one, explain what it measures.
+Ran 6 profiles: High-Energy Pop, Chill Lofi, Deep Intense Rock, plus three adversarial cases (conflicting preferences, unknown genre/mood, extreme low energy). Standard profiles matched intuition. The conflicting-preferences case revealed that categorical signals (mood, genre) can override the top-weighted energy score — surfacing a quiet classical song for a user who asked for high energy.
 
 ---
 
 ## 8. Future Work
 
-If you had more time, how would you improve this recommender
-
-Examples:
-
-- Add support for multiple users and "group vibe" recommendations
-- Balance diversity of songs instead of always picking the closest match
-- Use more features, like tempo ranges or lyric themes
+- Soft mood matching so similar moods get partial credit.
+- Conflict detection to flag contradictory user inputs.
+- Larger, more balanced catalog (3–5 songs per mood/genre minimum).
 
 ---
 
 ## 9. Personal Reflection
 
-A few sentences about what you learned:
-
-- What surprised you about how your system behaved
-- How did building this change how you think about real music recommenders
-- Where do you think human judgment still matters, even if the model seems "smart"
-
+Building this showed how quickly a simple weighted formula breaks at edge cases. The adversarial tests were more revealing than the standard ones — the conflicting-preferences profile exposed a failure mode that would never appear in a happy-path demo. It also reframed how I think about Spotify: their recommendations must handle these contradictions constantly, which is why learned weights and feedback loops matter so much more than hand-tuned rules.

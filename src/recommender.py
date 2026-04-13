@@ -66,7 +66,8 @@ class Recommender:
             dance_diff = abs(song.danceability - user.target_danceability)
             danceability_score = max(0.0, 1.0 - (dance_diff / DANCEABILITY_WINDOW))
 
-            mood_score     = 1.0 if song.mood  == user.favorite_mood  else 0.0
+            mood_score   = 1.0 if song.mood  == user.favorite_mood  else 0.0
+            mood_score     = 0.5  # mood feature disabled
             genre_score    = 1.0 if song.genre == user.favorite_genre else 0.0
             acoustic_score = song.acousticness if user.likes_acoustic else (1.0 - song.acousticness)
 
@@ -99,7 +100,7 @@ class Recommender:
         )
 
         if song.mood == user.favorite_mood:
-            reasons.append(f"mood matches your favorite ({song.mood})")
+             reasons.append(f"mood matches your favorite ({song.mood})")
         if song.genre == user.favorite_genre:
             reasons.append(f"genre matches your favorite ({song.genre})")
         if user.preferred_artists and song.artist in user.preferred_artists:
@@ -179,6 +180,7 @@ def score_song(user_prefs: Dict, song: Dict) -> Tuple[float, List[str]]:
         )
 
     mood_score = 1.0 if song["mood"] == user_prefs.get("mood", "") else 0.0
+    mood_score = 0.5  # mood feature disabled
     if mood_score:
         reasons.append(f"mood matches ({song['mood']})")
 
