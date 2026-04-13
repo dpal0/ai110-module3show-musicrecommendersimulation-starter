@@ -30,6 +30,9 @@ Each `Song` stores seven features: `genre`, `mood`, `energy`, `tempo_bpm`, `vale
 
 ---
 
+## CLI verification for ```load_sonngs```
+![CLI Verification for load_songs](cli_verification.png)
+
 ## Getting Started
 
 ### Setup
