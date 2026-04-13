@@ -11,7 +11,7 @@ Your goal is to:
 - Evaluate what your system gets right and wrong
 - Reflect on how this mirrors real world AI recommenders
 
-Replace this paragraph with your own summary of what your version does.
+Real-world recommenders like Spotify or YouTube Music operate on the same core idea: store a structured user profile and compare its fields against each item using weighted scores. My simulation mirrors that pattern. Each `Song` carries seven features — `genre`, `mood`, `energy`, `tempo_bpm`, `valence`, `danceability`, and `acousticness` — and each `UserProfile` stores four preference fields: `favorite_genre`, `favorite_mood`, `target_energy`, and `likes_acoustic`. My system then applies fixed weights (energy 0.50, mood 0.25, genre 0.15, acousticness 0.10) and an energy-window threshold of ±0.30 to score every song. Real systems likely learn those weights and thresholds from user behavior rather than hand-tuning them, but the underlying structure — profile fields driving weighted comparisons — is the same.
 
 ---
 

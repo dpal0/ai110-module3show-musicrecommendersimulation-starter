@@ -39,7 +39,7 @@ def test_recommend_returns_songs_sorted_by_score():
     )
     rec = make_small_recommender()
     results = rec.recommend(user, k=2)
-
+    print(results)
     assert len(results) == 2
     # Starter expectation: the pop, happy, high energy song should score higher
     assert results[0].genre == "pop"
